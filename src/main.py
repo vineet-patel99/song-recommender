@@ -1,0 +1,85 @@
+import requests
+import os
+from dotenv import load_dotenv
+import pandas as pd
+
+    
+load_dotenv()
+api_key = os.getenv("API_KEY")
+base_url = 'http://ws.audioscrobbler.com/2.0/?method'
+
+
+# extract_trackandartist(data: dict) -> list[dict[str, str]]
+# extracting the data from the recs
+# returns a dict
+def extract_trackandartist(data):
+    container = data.get("tracks") or data.get("toptracks") or data.get("similartracks") or {}
+    track_list = container.get("track", []) if isinstance(container, dict) else []
+    if isinstance(track_list, dict):
+        track_list = [track_list]
+    results = []
+    for t in track_list:
+        name = t.get("name")
+        artist = t.get("artist")
+        artist_name = artist.get("name") if isinstance(artist, dict) else artist
+        if name and artist_name:
+            results.append({"name": name, "artist": artist_name})
+    return results
+
+# get_recs_by_genre(genre: str) -> list[dict[str, str]]
+def get_recs_by_genre(genre):
+    params = {
+        'method': 'tag.getToptracks',
+        'tag': genre,
+        'limit': 5,
+        'api_key': api_key,
+        'format': 'json'        
+    }
+    try:
+        #should follow ws.audioscrobbler.com/2.0/?method=tag.gettoptracks&tag=disco&limit=5&api_key=API_KEY&format=json
+        response = requests.get(base_url, params=params)
+        if(response.status_code > 29):
+            data=response.json()
+    except Exception as e:
+        print(f"error fetching the recommendations, error response: {data['message']}", data=response.json())
+    
+    return extract_trackandartist(data)
+        
+# get_similar_by_song(song: dict[str, str]) -> list[dict[str, str]]
+def get_similar_by_song(song):
+    params = {
+        'method': 'track.getSimilar',
+        'artist': song['artist'],
+        'track': song['name'],
+        'limit': 5,
+        'api_key': api_key,
+        'format': 'json'        
+    }
+    try:
+        response = requests.get(base_url, params=params)
+        if(response.status_code > 29):
+            data=response.json()
+    except Exception as e:
+        print(f"error fetching the recommendations, error response: {data['message']}", data=response.json())
+    
+    return extract_trackandartist(data)
+
+
+tracks = {
+    'track_1': ['SR20DET', 'blksmiith'],
+    'track_2': ['what we did in the desert', 'eightiesheadachetape'],
+    'track_3': ['remember tomorrow', 'Deathbrain']
+}
+
+song_name, artist_name = tracks['track_1']
+song_info = {
+    'name': song_name,
+    'artist': artist_name
+}
+
+data = get_similar_by_song(song_info)
+
+print(data)
+
+
+

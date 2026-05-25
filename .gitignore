@@ -1,0 +1,14 @@
+# Ignore everything at repository root
+/*
+
+# Keep this .gitignore file
+!.gitignore
+
+# Keep requirements.txt
+!/requirements.txt
+
+# Keep the src directory and all its contents
+!/src/
+!/src/**
+
+# (Optional) If you want to keep other top-level files, add them above with a leading '!/'
