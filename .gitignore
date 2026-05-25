@@ -12,3 +12,4 @@
 !/src/**
 
 # (Optional) If you want to keep other top-level files, add them above with a leading '!/'
+!README.md

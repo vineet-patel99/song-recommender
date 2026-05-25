@@ -64,21 +64,22 @@ def get_similar_by_song(song):
     
     return extract_trackandartist(data)
 
-
+#hardcoded values for the tracks for now, will need to get tracks from the user (either through youtube or spotify links)
 tracks = {
     'track_1': ['SR20DET', 'blksmiith'],
     'track_2': ['what we did in the desert', 'eightiesheadachetape'],
     'track_3': ['remember tomorrow', 'Deathbrain']
 }
 
+#parsing the hard coded values for now
 song_name, artist_name = tracks['track_1']
 song_info = {
     'name': song_name,
     'artist': artist_name
 }
 
+#first test
 data = get_similar_by_song(song_info)
-
 print(data)
 
 
