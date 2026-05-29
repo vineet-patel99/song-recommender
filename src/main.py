@@ -2,12 +2,55 @@ import requests
 import os
 from dotenv import load_dotenv
 import pandas as pd
-
     
 load_dotenv()
 api_key = os.getenv("API_KEY")
 base_url = 'http://ws.audioscrobbler.com/2.0/?method'
 
+# parseTrackInfo(link: string) -> list[dict[str,str]]
+def parseTrackInfo(link):
+    # seeing if the link is either from spotify or youtube
+    # using https://open.spotify.com/track/3qRJbfpuFtfezml4hnNUgw?si=264e6980c47745e5 as test for spotify
+    # using https://www.youtube.com/watch?v=HYLxs7Gonac&list=RDHYLxs7Gonac&start_radio=1 as a test for yt
+    from urllib.parse import quote_plus
+
+    spotifyIdentifier = "https://open.spotify.com/track"
+    youtubeIdentifier1 = "https://www.youtube.com" #used for regular youtube music videos
+    youtubeIdentifier2 = "https://music.youtube.com" #used for youtube music tracks
+
+    if spotifyIdentifier in link:
+        response = requests.get(
+            f"https://open.spotify.com/oembed?url={quote_plus(link)}",
+            timeout=10,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return [{"name": data.get("title", ""), "artist": data.get("author_name", "")}]
+
+    if youtubeIdentifier1 in link or youtubeIdentifier2 in link:
+        response = requests.get(
+            f"https://www.youtube.com/oembed?url={quote_plus(link)}&format=json",
+            timeout=10,
+        )
+        response.raise_for_status()
+        data = response.json()
+        title = data.get("title", "")
+
+        if " by " in title:
+            song_name, artist_name = title.split(" by ", 1)
+        elif " - " in title:
+            song_name, artist_name = title.split(" - ", 1)
+        elif " | " in title:
+            song_name, artist_name = title.split(" | ", 1)
+        else:
+            song_name, artist_name = title, ""
+
+        return [{"name": song_name.strip(), "artist": artist_name.strip()}]
+
+    return []
+    
+
+    
 
 # extract_trackandartist(data: dict) -> list[dict[str, str]]
 # extracting the data from the recs
@@ -78,9 +121,9 @@ song_info = {
     'artist': artist_name
 }
 
-#first test
-data = get_similar_by_song(song_info)
-print(data)
+# # first test
+# data = get_similar_by_song(song_info)
+# print(data)
 
-
+print(parseTrackInfo("https://www.youtube.com/watch?v=HYLxs7Gonac&list=RDHYLxs7Gonac&start_radio=1"))
 
