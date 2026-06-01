@@ -7,7 +7,8 @@ load_dotenv()
 api_key = os.getenv("API_KEY")
 base_url = 'http://ws.audioscrobbler.com/2.0/?method'
 
-# parseTrackInfo(link: string) -> list[dict[str,str]]
+# parseTrackInfo(link: string) -> dict[str, str] | None
+#takes in a string and returns a dictionary containing two values
 def parseTrackInfo(link):
     # seeing if the link is either from spotify or youtube
     # using https://open.spotify.com/track/3qRJbfpuFtfezml4hnNUgw?si=264e6980c47745e5 as test for spotify
@@ -25,7 +26,7 @@ def parseTrackInfo(link):
         )
         response.raise_for_status()
         data = response.json()
-        return [{"name": data.get("title", ""), "artist": data.get("author_name", "")}]
+        return {"name": data.get("title", ""), "artist": data.get("author_name", "")}
 
     if youtubeIdentifier1 in link or youtubeIdentifier2 in link:
         response = requests.get(
@@ -45,29 +46,46 @@ def parseTrackInfo(link):
         else:
             song_name, artist_name = title, ""
 
-        return [{"name": song_name.strip(), "artist": artist_name.strip()}]
+        return {"name": song_name.strip(), "artist": artist_name.strip()}
 
-    return []
+    return None
     
 
     
 
-# extract_trackandartist(data: dict) -> list[dict[str, str]]
-# extracting the data from the recs
-# returns a dict
-def extract_trackandartist(data):
-    container = data.get("tracks") or data.get("toptracks") or data.get("similartracks") or {}
+def _extract_track_entries(data):
+    container = (
+        data.get("tracks")
+        or data.get("toptracks")
+        or data.get("similartracks")
+        or data.get("results", {}).get("trackmatches")
+        or {}
+    )
     track_list = container.get("track", []) if isinstance(container, dict) else []
     if isinstance(track_list, dict):
         track_list = [track_list]
+
     results = []
-    for t in track_list:
-        name = t.get("name")
-        artist = t.get("artist")
+    for track in track_list:
+        name = track.get("name")
+        artist = track.get("artist")
         artist_name = artist.get("name") if isinstance(artist, dict) else artist
         if name and artist_name:
             results.append({"name": name, "artist": artist_name})
     return results
+
+
+# extract_trackandartist(data: dict) -> dict[str, str] | None
+# extracting the data from the recs
+def extract_trackandartist(data):
+    tracks = _extract_track_entries(data)
+    return tracks[0] if tracks else None
+
+
+def _fetch_lastfm_data(params):
+    response = requests.get(base_url, params=params, timeout=10)
+    response.raise_for_status()
+    return response.json()
 
 # get_recs_by_genre(genre: str) -> list[dict[str, str]]
 def get_recs_by_genre(genre):
@@ -84,12 +102,14 @@ def get_recs_by_genre(genre):
         if(response.status_code > 29):
             data=response.json()
     except Exception as e:
-        print(f"error fetching the recommendations, error response: {data['message']}", data=response.json())
+        print(f"error fetching the recommendations: {e}")
     
-    return extract_trackandartist(data)
+    return []
         
 # get_similar_by_song(song: dict[str, str]) -> list[dict[str, str]]
 def get_similar_by_song(song):
+    if not song:
+        return []
     params = {
         'method': 'track.getSimilar',
         'artist': song['artist'],
@@ -99,31 +119,31 @@ def get_similar_by_song(song):
         'format': 'json'        
     }
     try:
-        response = requests.get(base_url, params=params)
-        if(response.status_code > 29):
-            data=response.json()
+        data = _fetch_lastfm_data(params)
+        tracks = _extract_track_entries(data)
+        if tracks:
+            return tracks
+
+        fallback_params = {
+            'method': 'track.search',
+            'artist': song['artist'],
+            'track': song['name'],
+            'limit': 5,
+            'api_key': api_key,
+            'format': 'json'
+        }
+        fallback_data = _fetch_lastfm_data(fallback_params)
+        return _extract_track_entries(fallback_data)
     except Exception as e:
-        print(f"error fetching the recommendations, error response: {data['message']}", data=response.json())
+        print(f"error fetching the recommendations: {e}")
     
-    return extract_trackandartist(data)
+    return []
 
-#hardcoded values for the tracks for now, will need to get tracks from the user (either through youtube or spotify links)
-tracks = {
-    'track_1': ['SR20DET', 'blksmiith'],
-    'track_2': ['what we did in the desert', 'eightiesheadachetape'],
-    'track_3': ['remember tomorrow', 'Deathbrain']
-}
 
-#parsing the hard coded values for now
-song_name, artist_name = tracks['track_1']
-song_info = {
-    'name': song_name,
-    'artist': artist_name
-}
 
-# # first test
-# data = get_similar_by_song(song_info)
-# print(data)
 
-print(parseTrackInfo("https://www.youtube.com/watch?v=HYLxs7Gonac&list=RDHYLxs7Gonac&start_radio=1"))
+
+print(get_similar_by_song(
+    parseTrackInfo("https://www.youtube.com/watch?v=HYLxs7Gonac&list=RDHYLxs7Gonac&start_radio=1")
+    ))
 
