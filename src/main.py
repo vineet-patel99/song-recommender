@@ -36,7 +36,9 @@ def parseTrackInfo(link):
         response.raise_for_status()
         data = response.json()
         title = data.get("title", "")
-
+        artist_name = data.get('author_name', '')
+        if " - Topic" in artist_name:
+            artist_name = artist_name[0:artist_name.find(' - Topic')] 
         if " by " in title:
             song_name, artist_name = title.split(" by ", 1)
         elif " - " in title:
@@ -44,14 +46,16 @@ def parseTrackInfo(link):
         elif " | " in title:
             song_name, artist_name = title.split(" | ", 1)
         else:
-            song_name, artist_name = title, ""
+            song_name, artist_name = title, artist_name
 
         return {"name": song_name.strip(), "artist": artist_name.strip()}
 
     return None
-    
 
-    
+def _fetch_lastfm_data(params):
+    response = requests.get(base_url, params=params, timeout=10)
+    response.raise_for_status()
+    return response.json()
 
 def _extract_track_entries(data):
     container = (
@@ -67,25 +71,19 @@ def _extract_track_entries(data):
 
     results = []
     for track in track_list:
-        name = track.get("name")
+        if not isinstance(track, dict):
+            continue
+
+        name = track.get("name") or track.get("title") or track.get("track")
         artist = track.get("artist")
-        artist_name = artist.get("name") if isinstance(artist, dict) else artist
+        if isinstance(artist, dict):
+            artist_name = artist.get("name") or artist.get("text") or artist.get("#text")
+        else:
+            artist_name = artist
+
         if name and artist_name:
-            results.append({"name": name, "artist": artist_name})
+            results.append({"name": str(name).strip(), "artist": str(artist_name).strip()})
     return results
-
-
-# extract_trackandartist(data: dict) -> dict[str, str] | None
-# extracting the data from the recs
-def extract_trackandartist(data):
-    tracks = _extract_track_entries(data)
-    return tracks[0] if tracks else None
-
-
-def _fetch_lastfm_data(params):
-    response = requests.get(base_url, params=params, timeout=10)
-    response.raise_for_status()
-    return response.json()
 
 # get_recs_by_genre(genre: str) -> list[dict[str, str]]
 def get_recs_by_genre(genre):
@@ -104,7 +102,7 @@ def get_recs_by_genre(genre):
     except Exception as e:
         print(f"error fetching the recommendations: {e}")
     
-    return []
+    return _extract_track_entries(data)
         
 # get_similar_by_song(song: dict[str, str]) -> list[dict[str, str]]
 def get_similar_by_song(song):
@@ -120,30 +118,17 @@ def get_similar_by_song(song):
     }
     try:
         data = _fetch_lastfm_data(params)
-        tracks = _extract_track_entries(data)
-        if tracks:
-            return tracks
-
-        fallback_params = {
-            'method': 'track.search',
-            'artist': song['artist'],
-            'track': song['name'],
-            'limit': 5,
-            'api_key': api_key,
-            'format': 'json'
-        }
-        fallback_data = _fetch_lastfm_data(fallback_params)
-        return _extract_track_entries(fallback_data)
+        
     except Exception as e:
         print(f"error fetching the recommendations: {e}")
     
-    return []
+    return _extract_track_entries(data)
 
 
 
 
+#testing area
+data = parseTrackInfo("https://music.youtube.com/watch?v=4jBYUm3ux-I")
 
-print(get_similar_by_song(
-    parseTrackInfo("https://www.youtube.com/watch?v=HYLxs7Gonac&list=RDHYLxs7Gonac&start_radio=1")
-    ))
+print(get_similar_by_song(data))
 
