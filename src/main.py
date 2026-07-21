@@ -1,15 +1,23 @@
 import requests
 import os
 from dotenv import load_dotenv
-import pandas as pd
     
 load_dotenv()
 api_key = os.getenv("API_KEY")
-base_url = 'http://ws.audioscrobbler.com/2.0/?method'
-
+base_url = 'http://ws.audioscrobbler.com/2.0/?method' #base url used when fetching last.fm data
+songList = dict()
 # parseTrackInfo(link: string) -> dict[str, str] | None
 #takes in a string and returns a dictionary containing two values
 def parseTrackInfo(link):
+    """Parse a Spotify or YouTube link and extract song title and artist.
+
+    Parameters:
+    - link (str): A URL pointing to a Spotify track or YouTube (music) video.
+
+    Returns:
+    - dict: {'name': <song title>, 'artist': <artist name>} when parsing succeeds.
+    - None: if the link is not a supported provider or parsing fails.
+    """
     # seeing if the link is either from spotify or youtube
     # using https://open.spotify.com/track/3qRJbfpuFtfezml4hnNUgw?si=264e6980c47745e5 as test for spotify
     # using https://www.youtube.com/watch?v=HYLxs7Gonac&list=RDHYLxs7Gonac&start_radio=1 as a test for yt
@@ -52,12 +60,36 @@ def parseTrackInfo(link):
 
     return None
 
-def _fetch_lastfm_data(params):
+def fetch_lastfm_data(params):
+    """Fetch JSON data from the Last.fm API using provided query parameters.
+
+    Parameters:
+    - params (dict): Query parameters to include in the GET request.
+
+    Returns:
+    - dict: Parsed JSON response from the API.
+
+    Raises:
+    - requests.HTTPError: If the HTTP request returned an unsuccessful status.
+    """
     response = requests.get(base_url, params=params, timeout=10)
     response.raise_for_status()
     return response.json()
 
-def _extract_track_entries(data):
+'''
+takes in .json data and parses it into a dictionary containing each song's name and artist
+also need to get the album cover data as well as most used color in the album cover to generate
+a proper "card" for the app/website
+'''
+def extract_track_entries(data):
+    """Extract a normalized list of track dictionaries from various Last.fm response shapes.
+
+    Parameters:
+    - data (dict): Raw JSON response from Last.fm that may contain tracks in different keys.
+
+    Returns:
+    - list[dict]: Each item is {'name': <track name>, 'artist': <artist name>}.
+    """
     container = (
         data.get("tracks")
         or data.get("toptracks")
@@ -76,6 +108,7 @@ def _extract_track_entries(data):
 
         name = track.get("name") or track.get("title") or track.get("track")
         artist = track.get("artist")
+        tags = track.get("tags")
         if isinstance(artist, dict):
             artist_name = artist.get("name") or artist.get("text") or artist.get("#text")
         else:
@@ -87,6 +120,9 @@ def _extract_track_entries(data):
 
 # get_recs_by_genre(genre: str) -> list[dict[str, str]]
 def get_recs_by_genre(genre):
+    if not genre:
+        return []
+
     params = {
         'method': 'tag.getToptracks',
         'tag': genre,
@@ -94,20 +130,28 @@ def get_recs_by_genre(genre):
         'api_key': api_key,
         'format': 'json'        
     }
+    data = {}
     try:
-        #should follow ws.audioscrobbler.com/2.0/?method=tag.gettoptracks&tag=disco&limit=5&api_key=API_KEY&format=json
-        response = requests.get(base_url, params=params)
-        if(response.status_code > 29):
-            data=response.json()
+        data = fetch_lastfm_data(params)
     except Exception as e:
         print(f"error fetching the recommendations: {e}")
     
-    return _extract_track_entries(data)
+    return extract_track_entries(data)
         
 # get_similar_by_song(song: dict[str, str]) -> list[dict[str, str]]
 def get_similar_by_song(song):
+    """Get tracks similar to a given song using Last.fm's track.getSimilar method.
+
+    Parameters:
+    - song (dict): A dictionary with keys 'name' and 'artist'.
+
+    Returns:
+    - list[dict]: Normalized list of similar tracks with 'name' and 'artist'.
+    """
+
     if not song:
         return []
+
     params = {
         'method': 'track.getSimilar',
         'artist': song['artist'],
@@ -116,19 +160,11 @@ def get_similar_by_song(song):
         'api_key': api_key,
         'format': 'json'        
     }
+    data = {}
     try:
-        data = _fetch_lastfm_data(params)
+        data = fetch_lastfm_data(params)
         
     except Exception as e:
         print(f"error fetching the recommendations: {e}")
     
-    return _extract_track_entries(data)
-
-
-
-
-#testing area
-data = parseTrackInfo("https://music.youtube.com/watch?v=4jBYUm3ux-I")
-
-print(get_similar_by_song(data))
-
+    return extract_track_entries(data)
