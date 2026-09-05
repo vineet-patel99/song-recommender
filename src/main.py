@@ -78,7 +78,7 @@ def fetch_lastfm_data(params):
 
 '''
 takes in .json data and parses it into a dictionary containing each song's name and artist
-also need to get the album cover data as well as most used color in the album cover to generate
+- need to get the album cover data as well as most used color in the album cover to generate
 a proper "card" for the app/website
 '''
 def extract_track_entries(data):
@@ -108,7 +108,7 @@ def extract_track_entries(data):
 
         name = track.get("name") or track.get("title") or track.get("track")
         artist = track.get("artist")
-        tags = track.get("tags")
+        cover = track.get("")
         if isinstance(artist, dict):
             artist_name = artist.get("name") or artist.get("text") or artist.get("#text")
         else:
@@ -118,27 +118,6 @@ def extract_track_entries(data):
             results.append({"name": str(name).strip(), "artist": str(artist_name).strip()})
     return results
 
-# get_recs_by_genre(genre: str) -> list[dict[str, str]]
-def get_recs_by_genre(genre):
-    if not genre:
-        return []
-
-    params = {
-        'method': 'tag.getToptracks',
-        'tag': genre,
-        'limit': 5,
-        'api_key': api_key,
-        'format': 'json'        
-    }
-    data = {}
-    try:
-        data = fetch_lastfm_data(params)
-    except Exception as e:
-        print(f"error fetching the recommendations: {e}")
-    
-    return extract_track_entries(data)
-        
-# get_similar_by_song(song: dict[str, str]) -> list[dict[str, str]]
 def get_similar_by_song(song):
     """Get tracks similar to a given song using Last.fm's track.getSimilar method.
 

@@ -2,9 +2,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 
 try:
-    from .main import get_recs_by_genre, get_similar_by_song, parseTrackInfo
+    from .main import get_similar_by_song, parseTrackInfo
 except ImportError:
-    from main import get_recs_by_genre, get_similar_by_song, parseTrackInfo
+    from main import get_similar_by_song, parseTrackInfo
 
 
 HOST = "127.0.0.1"

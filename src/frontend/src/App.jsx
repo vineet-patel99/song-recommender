@@ -18,7 +18,9 @@ async function requestJson(url, options = {}) {
   return payload;
 }
 
-function TrackList({ title, count, items }) {
+//would want to use this to show the cards and then put it in a list
+//add cover to the function parameters and add the <img> tag under "track-list"
+function TrackList({ title, count, items,}) {
   return (
     <div className="results">
       <div className="result-head">
@@ -30,6 +32,7 @@ function TrackList({ title, count, items }) {
         <div className="track-list">
           {items.map((item, index) => (
             <article className="track-card" key={`${item.artist}-${item.name}-${index}`}>
+              <img src={item.cover} alt={`${item.name} cover`} />
               <h3>{item.name}</h3>
               <p>{item.artist}</p>
             </article>
@@ -122,7 +125,7 @@ export default function App() {
           <div className={`hero-badge ${health === "online" ? "ok" : health === "offline" ? "error" : ""}`}>
             Backend {health}
           </div>
-          <h1>React frontend for your Python music recommender.</h1>
+          <h1>&lt;Insert Title Here&gt;</h1>
           <p>
             This template uses React on the client and a lightweight Python JSON API on the backend.
             Requests are sent to <strong>/api</strong>, so the frontend can talk to the backend without hard-coded hosts.
@@ -132,30 +135,6 @@ export default function App() {
         <section className="grid">
           <div className="panel">
             <div className="panel-body stack">
-              <div>
-                <h2>Discover by genre</h2>
-                <p className="subtle">Ask the backend for tracks that match a genre or tag.</p>
-              </div>
-
-              <form className="stack" onSubmit={loadGenreRecommendations}>
-                <div className="field">
-                  <label htmlFor="genre">Genre</label>
-                  <input
-                    id="genre"
-                    name="genre"
-                    value={genre}
-                    onChange={(event) => setGenre(event.target.value)}
-                    placeholder="Type or paste in a specific genre"
-                  />
-                </div>
-
-                <div className="button-row">
-                  <button type="submit" disabled={loading}>
-                    {loading ? "Loading..." : "Get genre picks"}
-                  </button>
-                </div>
-              </form>
-
               <form className="stack" onSubmit={loadSongRecommendations}>
                 <div className="field">
                   <label htmlFor="songLink">Song link</label>
