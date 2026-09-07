@@ -20,7 +20,7 @@ async function requestJson(url, options = {}) {
 
 //would want to use this to show the cards and then put it in a list
 //add cover to the function parameters and add the <img> tag under "track-list"
-function TrackList({ title, count, items,}) {
+function TrackList({ title, count, items}) {
   return (
     <div className="results">
       <div className="result-head">
@@ -32,7 +32,7 @@ function TrackList({ title, count, items,}) {
         <div className="track-list">
           {items.map((item, index) => (
             <article className="track-card" key={`${item.artist}-${item.name}-${index}`}>
-              <img src={item.cover} alt={`${item.name} cover`} />
+              <img src={item.image} alt={`${item.name} cover`} />
               <h3>{item.name}</h3>
               <p>{item.artist}</p>
             </article>

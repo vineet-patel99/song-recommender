@@ -76,6 +76,25 @@ def fetch_lastfm_data(params):
     response.raise_for_status()
     return response.json()
 
+def get_song_info(song):
+
+    url = f"http://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key={api_key}&artist={song["artist"]}&track={song["name"]}&format=json"
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+
+    images = data.get("track", {}).get("album", {}).get("image", [])
+    if isinstance(images, dict):
+        images = [images]
+
+    return next(
+        (image for image in images if image.get("size") == "extralarge"),
+        images[0] if images else {},
+    )
+
+    
+
+
 '''
 takes in .json data and parses it into a dictionary containing each song's name and artist
 - need to get the album cover data as well as most used color in the album cover to generate
@@ -88,7 +107,8 @@ def extract_track_entries(data):
     - data (dict): Raw JSON response from Last.fm that may contain tracks in different keys.
 
     Returns:
-    - list[dict]: Each item is {'name': <track name>, 'artist': <artist name>}.
+        - list[dict]: Each item is {'name': <track name>, 'artist': <artist name>,
+            'image': <album cover URL>}.
     """
     container = (
         data.get("tracks")
@@ -108,14 +128,15 @@ def extract_track_entries(data):
 
         name = track.get("name") or track.get("title") or track.get("track")
         artist = track.get("artist")
-        cover = track.get("")
         if isinstance(artist, dict):
             artist_name = artist.get("name") or artist.get("text") or artist.get("#text")
         else:
             artist_name = artist
 
         if name and artist_name:
-            results.append({"name": str(name).strip(), "artist": str(artist_name).strip()})
+            song = {"name": str(name).strip(), "artist": str(artist_name).strip()}
+            image = get_song_info(song)
+            results.append({**song, "image": image.get("#text", "")})
     return results
 
 def get_similar_by_song(song):
